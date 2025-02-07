@@ -12,7 +12,7 @@ contract PiggyBankContract{
         token=ERC20(_erc20Address);
     }
 
-    uint private savedTokens;
+    mapping(address => uint256) public savedTokens;
     event Deposited(address depositor, uint amount);
     event Withdraw(address withdrawer, uint amount);
 
@@ -20,20 +20,20 @@ contract PiggyBankContract{
     function depositToSavingsContract(uint _savingsAmount) external {
         require(_savingsAmount > 21000, "Insufficient Tokens");
          require(token.transferFrom(msg.sender, address(this), _savingsAmount), "Transfer Failed");
-         savedTokens += _savingsAmount;
+         savedTokens[msg.sender]=_savingsAmount;
 
          emit Deposited(msg.sender, _savingsAmount);
     }
 
     function withdrawToken(uint _amount) external  {
-         require(savedTokens  >= _amount, "Insuficient SavedToken");
+         require(savedTokens[msg.sender]  >= _amount, "Insuficient SavedToken");
          require(token.transfer(msg.sender, _amount), "Transfer Failed");
-         savedTokens -= _amount;
+        savedTokens[msg.sender] = savedTokens[msg.sender] - _amount;
          emit Withdraw(msg.sender, _amount);
     }
     
     function getTokenBalance() public view returns(uint) {
-        return savedTokens;
+        return savedTokens[msg.sender];
     }
 
 }

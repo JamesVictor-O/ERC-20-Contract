@@ -4,23 +4,25 @@ pragma solidity ^0.8.28;
 contract ERC20 {
 
 // this maps each account address to a unit, which repersent the number  of token owned bt the account
-mapping(address => uint256) private  _balances;
+mapping(address => uint256) public  _balances;
 
 
 //    This is a nested mapping that stores the allowances granted by token holders to other addresses
 
-   mapping (address => mapping (address => uint256)) private _allowance;
+   mapping (address => mapping (address => uint256)) public _allowance;
 
-   uint256 private _totalSupply;
-
-   string private _name;
-   string private _symbol;
+   uint256 public _totalSupply;
+   uint8 public _decimals = 18;
+   string public _name;
+   string public _symbol;
    address public _owner;
 
-   constructor(string memory name_, string memory symbol_){
+   constructor(string memory name_, string memory symbol_, uint initialSupply_){
           _name=name_;
           _symbol=symbol_;
           _owner=msg.sender;
+         _totalSupply = initialSupply_ * (10 ** uint256(_decimals));
+        _balances[msg.sender] = _totalSupply;
    }
 
     //  Events
@@ -39,16 +41,13 @@ mapping(address => uint256) private  _balances;
    }
     
    function getDecimals() public view  virtual returns(uint8){
-     return 18;
+     return _decimals;
    }
 
    function totalSupply() public view virtual returns(uint256){
        return  _totalSupply;
    }
 
-//   function _msgSender() internal view returns (address) {
-//     return msg.sender;
-// }
 
 
 // this function return the token balance of a specific adress from the _balance mapping
@@ -96,11 +95,12 @@ function allowance(address owner, address spender) public virtual view returns(u
  
 
 
-   function mintToken(uint _amountOfToken) public {
+   function mintToken(address to_,uint amountOfToken_) public {
        require(msg.sender == _owner, "Only the owner");
-       _totalSupply += _amountOfToken;
+       _totalSupply += amountOfToken_;
+       _balances[to_]=amountOfToken_;
 
-      emit MintToken(msg.sender, _amountOfToken);
+      emit MintToken(to_, amountOfToken_);
    }
 // __________________helper function_______________________________________
 
@@ -132,13 +132,28 @@ function allowance(address owner, address spender) public virtual view returns(u
    function _approve(address owner, address spender, uint value, bool emitEvent) public virtual{
        require(owner != address(0), "Invalid owner Account");
        require(spender != address(0), "Invalid spender account");
-       _allowance[owner][spender]=value;
+       _allowance[owner][spender] -= value;
+        _balances[owner] -= value;
+        _balances[spender] += value;
 
        if(emitEvent){
         emit Approval(owner,spender,value);
        }
    }
 
+   // function for decreasing and increasing allowance
+
+   function increaseAllowance(address spender, uint256 addedValue) public {
+        _allowance[msg.sender][spender] += addedValue;
+    }
+
+    function decreaseAllowance(address spender, uint256 subtractedValue) public {
+        if (_allowance[msg.sender][spender] < subtractedValue) {
+            revert("Decreased allowance below zero");
+        }
+        _allowance[msg.sender][spender] -= subtractedValue;
+    }
+      
 
 
     //  Deducts the allowance when a spender uses it.
